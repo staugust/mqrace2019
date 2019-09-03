@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SeqStoreManager {
@@ -20,6 +21,7 @@ public class SeqStoreManager {
   public static Integer Index = 0;
   public ThreadLocal<SeqStore> currentStore = ThreadLocal.withInitial(SeqStoreManager::GetStore);
 
+  AtomicBoolean shouldForce = new AtomicBoolean(true);
   public SeqStoreManager() {
     try {
       int storeCount = GetStoreCount();
@@ -76,10 +78,12 @@ public class SeqStoreManager {
   }
 
   public void put(Message message) {
+    shouldForce.set(true);
     currentStore.get().put(message);
   }
 
   public List<Message> getMessage(long aMin, long aMax, long tMin, long tMax) {
+    forceSave();
     LinkedList<Message> res = new LinkedList<>();
     Stores.values().forEach(store -> {
       res.addAll(store.getMessage(aMin, aMax, tMin, tMax));
@@ -91,6 +95,7 @@ public class SeqStoreManager {
   }
 
   public long getAvgValue(long aMin, long aMax, long tMin, long tMax) {
+    forceSave();
     AtomicLong count = new AtomicLong(0);
     AtomicLong sumA = new AtomicLong(0);
     Stores.values().forEach(store -> {
@@ -101,4 +106,13 @@ public class SeqStoreManager {
     return (long) (sumA.get() / count.get());
   }
 
+  public void forceSave() {
+    if(shouldForce.compareAndSet(true, false)){
+      synchronized (Stores) {
+        Stores.values().forEach(store -> {
+          store.force();
+        });
+      }
+    }
+  }
 }

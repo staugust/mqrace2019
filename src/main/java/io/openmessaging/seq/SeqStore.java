@@ -28,8 +28,11 @@ public class SeqStore {
   long lastTs = MIN_TS;
   final static long MIN_TS = 0x8000000000000000L;
   final static long MAX_TS = 0x7fffffffffffffffL;
+  final static int PAGE_SIZE = 4096;
 
-  ByteBuffer buffer = ByteBuffer.allocate(16);
+  ByteBuffer attrBuffer = ByteBuffer.allocateDirect(8 * PAGE_SIZE);
+  ByteBuffer keyBuffer = ByteBuffer.allocateDirect(16 * PAGE_SIZE);
+  ByteBuffer dataBuffer = ByteBuffer.allocateDirect((int) Constants.MsgBodyLen * PAGE_SIZE);
 
   public SeqStore(int idx) {
     Path treePath = Paths.get(String.format(Constants.Tree_bin, idx));
@@ -58,15 +61,17 @@ public class SeqStore {
   public void put(Message msg) {
     if (lastTs == MIN_TS || msg.getT() > lastTs) {
       lastTs = msg.getT();
-      buffer.clear();
-      buffer.putLong(entries);
-      buffer.putLong(lastTs);
+      keyBuffer.putLong(entries);
+      keyBuffer.putLong(lastTs);
       try {
-        buffer.position(0);
-        int bytes = keysF.write(buffer);
-        if (bytes != 16) {
-          System.out.println("error with keys ");
-          System.exit(-1);
+        if (keyBuffer.position() == keyBuffer.capacity()) {
+          keyBuffer.position(0);
+          int bytes = keysF.write(keyBuffer);
+          if (bytes != keyBuffer.capacity()) {
+            System.out.printf("write keyBuffer %d bytes.\n", bytes);
+            System.exit(-1);
+          }
+          keyBuffer.clear();
         }
       } catch (IOException e) {
         e.printStackTrace();
@@ -78,18 +83,26 @@ public class SeqStore {
 
   public long writeMessage(Message msg) {
     try {
-      int bytes = dataF.write(ByteBuffer.wrap(msg.getBody()));
-      if (bytes != Constants.MsgBodyLen) {
-        System.out.printf("write body %d bytes.\n", bytes);
-        System.exit(-1);
+      dataBuffer.put(msg.getBody());
+      if (dataBuffer.capacity() == dataBuffer.position()) {
+        dataBuffer.position(0);
+        int bytes = dataF.write(dataBuffer);
+        dataBuffer.clear();
+        if (bytes != dataBuffer.capacity()) {
+          System.out.printf("write body %d bytes.\n", bytes);
+          System.exit(-1);
+        }
       }
-      ByteBuffer aBuffer = ByteBuffer.allocate(8);
-      aBuffer.putLong(msg.getA());
-      aBuffer.position(0);
-      bytes = attrF.write(aBuffer);
-      if (bytes != 8) {
-        System.out.printf("write attr %d bytes.\n", bytes);
-        System.exit(-1);
+
+      attrBuffer.putLong(msg.getA());
+      if (attrBuffer.position() == attrBuffer.capacity()) {
+        attrBuffer.position(0);
+        int bytes = attrF.write(attrBuffer);
+        attrBuffer.clear();
+        if (bytes != attrBuffer.capacity()) {
+          System.out.printf("write attr %d bytes.\n", bytes);
+          System.exit(-1);
+        }
       }
     } catch (IOException e) {
       e.printStackTrace();
@@ -205,5 +218,40 @@ public class SeqStore {
     lst.add(count);
     lst.add(sumA);
     return lst;
+  }
+
+  void force() {
+    try {
+      int len = keyBuffer.position();
+      byte[] keyBytes = new byte[len];
+      keyBuffer.position(0);
+      keyBuffer.get(keyBytes, 0, len);
+      int bytes = keysF.write(ByteBuffer.wrap(keyBytes));
+      if (bytes != len) {
+        System.out.println("write sub-keybuffer  " + bytes + " which should be " + len);
+        System.exit(-1);
+      }
+      len = dataBuffer.position();
+      byte[] dataBytes = new byte[len];
+      dataBuffer.position(0);
+      dataBuffer.get(dataBytes, 0, len);
+      bytes = dataF.write(ByteBuffer.wrap(dataBytes));
+      if (bytes != len) {
+        System.out.println("write sub-databuffer  " + bytes + " which should be " + len);
+        System.exit(-1);
+      }
+      len = attrBuffer.position();
+      byte[] attrBytes = new byte[len];
+      attrBuffer.position(0);
+      attrBuffer.get(attrBytes, 0, len);
+      bytes = attrF.write(ByteBuffer.wrap(dataBytes));
+      if (bytes != len) {
+        System.out.println("write sub-attrbuffer  " + bytes + " which should be " + len);
+        System.exit(-1);
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 }

@@ -94,7 +94,7 @@ public class SeqStoreManager {
       }else if(x.getT() == y.getT()){
         return 0;
       }else{
-        return -1;
+        return 1;
       }
     });
     return res;

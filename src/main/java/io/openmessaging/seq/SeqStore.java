@@ -1,8 +1,8 @@
 package io.openmessaging.seq;
 
-import com.sun.corba.se.impl.orbutil.closure.Constant;
 import io.openmessaging.Message;
 import io.openmessaging.btree.Constants;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -47,7 +47,7 @@ public class SeqStore {
       dataR = FileChannel.open(dataPath, StandardOpenOption.READ, StandardOpenOption.DSYNC);
       keysR = FileChannel.open(metaPath, StandardOpenOption.READ, StandardOpenOption.DSYNC);
       if (hasData) {
-        entries = dataF.size() /  Constants.MsgBodyLen;
+        entries = dataF.size() / Constants.MsgBodyLen;
         ByteBuffer buffer = ByteBuffer.allocate(8);
         keysR.read(buffer, keysR.size() - 8);
         buffer.position(0);
@@ -67,7 +67,7 @@ public class SeqStore {
       try {
         buffer.position(0);
         int bytes = keysF.write(buffer);
-        if(bytes != 16){
+        if (bytes != 16) {
           System.out.println("error with keys ");
           System.exit(-1);
         }
@@ -82,7 +82,7 @@ public class SeqStore {
   public long writeMessage(Message msg) {
     try {
       int bytes = dataF.write(ByteBuffer.wrap(msg.getBody()));
-      if(bytes !=Constants.MsgBodyLen){
+      if (bytes != Constants.MsgBodyLen) {
         System.out.printf("write body %d bytes.\n", bytes);
         System.exit(-1);
       }
@@ -90,7 +90,7 @@ public class SeqStore {
       aBuffer.putLong(msg.getA());
       aBuffer.position(0);
       bytes = attrF.write(aBuffer);
-      if(bytes !=8){
+      if (bytes != 8) {
         System.out.printf("write attr %d bytes.\n", bytes);
         System.exit(-1);
       }
@@ -117,19 +117,19 @@ public class SeqStore {
       prevKey = contentBuffer.getLong(8);
       long totalKeys = keysF.size() / 16;
       for (; keyIdx <= totalKeys; keyIdx++) {
-        if(keyIdx!=totalKeys){
+        if (keyIdx != totalKeys) {
           contentBuffer.clear();
           keysR.read(contentBuffer, keyIdx * 16);
           nextIdx = contentBuffer.getLong(0);
           nextKey = contentBuffer.getLong(8);
-        }else{
+        } else {
           nextIdx = entries;
           nextKey = MAX_TS;
         }
-        if(prevKey >= tMin && prevKey <= tMax){
-          for(long offset = prevIdx; offset < nextIdx; offset++){
+        if (prevKey >= tMin && prevKey <= tMax) {
+          for (long offset = prevIdx; offset < nextIdx; offset++) {
             Message msg = readMsg(prevKey, offset, aMin, aMax);
-            if(msg != null){
+            if (msg != null) {
               res.add(msg);
             }
           }
@@ -137,24 +137,24 @@ public class SeqStore {
         prevIdx = nextIdx;
         prevKey = nextKey;
       }
-    }catch (Exception e){
+    } catch (Exception e) {
       e.printStackTrace();
     }
     return res;
   }
 
-  public Message readMsg(long t, long idx, long aMin, long aMax){
+  public Message readMsg(long t, long idx, long aMin, long aMax) {
     ByteBuffer attrBuffer = ByteBuffer.allocate(8);
-    byte[] bytes = new byte[(int)Constants.MsgBodyLen];
+    byte[] bytes = new byte[(int) Constants.MsgBodyLen];
     long a = MIN_TS;
     try {
       attrR.read(attrBuffer, idx * 8);
       dataR.read(ByteBuffer.wrap(bytes), idx * Constants.MsgBodyLen);
       a = attrBuffer.getLong(0);
-    }catch (Exception e){
+    } catch (Exception e) {
       e.printStackTrace();
     }
-    if(a < aMin || a > aMax){
+    if (a < aMin || a > aMax) {
       return null;
     }
     return new Message(t, attrBuffer.getLong(0), bytes);
@@ -177,22 +177,22 @@ public class SeqStore {
       prevKey = contentBuffer.getLong(8);
       long totalKeys = keysF.size() / 16;
       for (; keyIdx <= totalKeys; keyIdx++) {
-        if(keyIdx!=totalKeys){
+        if (keyIdx != totalKeys) {
           contentBuffer.clear();
           keysR.read(contentBuffer, keyIdx * 16);
           nextIdx = contentBuffer.getLong(0);
           nextKey = contentBuffer.getLong(8);
-        }else{
+        } else {
           nextIdx = entries;
           nextKey = MAX_TS;
         }
-        if(prevKey >= tMin && prevKey <= tMax){
+        if (prevKey >= tMin && prevKey <= tMax) {
           ByteBuffer attrBuffer = ByteBuffer.allocate(8);
-          for(long offset = prevIdx; offset < nextIdx; offset++){
+          for (long offset = prevIdx; offset < nextIdx; offset++) {
             attrBuffer.clear();
             attrR.read(attrBuffer, offset * 8);
             long a = attrBuffer.getLong(0);
-            if(a >= aMin && a <= aMax){
+            if (a >= aMin && a <= aMax) {
               sumA += a;
               count += 1;
             }
@@ -201,7 +201,7 @@ public class SeqStore {
         prevIdx = nextIdx;
         prevKey = nextKey;
       }
-    }catch (Exception e){
+    } catch (Exception e) {
       e.printStackTrace();
     }
     List<Long> lst = new ArrayList<>();

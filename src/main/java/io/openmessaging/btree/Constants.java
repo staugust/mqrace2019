@@ -1,8 +1,5 @@
 package io.openmessaging.btree;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 public class Constants {
   public static final int TREE_ROOT_LEAF = 1;// children are TREE_DATANODE
   public static final int TREE_ROOT = 2;  //children are TREE_NODE

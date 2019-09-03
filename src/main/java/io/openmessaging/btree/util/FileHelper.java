@@ -5,8 +5,6 @@ import io.openmessaging.btree.Constants;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.StandardOpenOption;
-import java.util.concurrent.locks.Lock;
 
 public class FileHelper {
   FileChannel treeFc = null;

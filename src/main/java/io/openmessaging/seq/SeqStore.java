@@ -240,11 +240,12 @@ public class SeqStore {
         System.out.println("write sub-databuffer  " + bytes + " which should be " + len);
         System.exit(-1);
       }
+
       len = attrBuffer.position();
       byte[] attrBytes = new byte[len];
       attrBuffer.position(0);
       attrBuffer.get(attrBytes, 0, len);
-      bytes = attrF.write(ByteBuffer.wrap(dataBytes));
+      bytes = attrF.write(ByteBuffer.wrap(attrBytes));
       if (bytes != len) {
         System.out.println("write sub-attrbuffer  " + bytes + " which should be " + len);
         System.exit(-1);

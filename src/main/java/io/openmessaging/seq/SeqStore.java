@@ -37,15 +37,12 @@ public class SeqStore {
     Path metaPath = Paths.get(String.format(Constants.Meta_bin, idx));
     boolean hasData = Files.exists(treePath);
     try {
-      attrF = FileChannel.open(treePath, StandardOpenOption.APPEND,
-          StandardOpenOption.DSYNC, StandardOpenOption.CREATE);
-      dataF = FileChannel.open(dataPath, StandardOpenOption.APPEND,
-          StandardOpenOption.DSYNC, StandardOpenOption.CREATE);
-      keysF = FileChannel.open(metaPath, StandardOpenOption.APPEND,
-          StandardOpenOption.DSYNC, StandardOpenOption.CREATE);
-      attrR = FileChannel.open(treePath, StandardOpenOption.READ, StandardOpenOption.DSYNC);
-      dataR = FileChannel.open(dataPath, StandardOpenOption.READ, StandardOpenOption.DSYNC);
-      keysR = FileChannel.open(metaPath, StandardOpenOption.READ, StandardOpenOption.DSYNC);
+      attrF = FileChannel.open(treePath, StandardOpenOption.APPEND, StandardOpenOption.CREATE);//,StandardOpenOption.DSYNC);
+      dataF = FileChannel.open(dataPath, StandardOpenOption.APPEND, StandardOpenOption.CREATE);//,StandardOpenOption.DSYNC);
+      keysF = FileChannel.open(metaPath, StandardOpenOption.APPEND, StandardOpenOption.CREATE);//,StandardOpenOption.DSYNC);
+      attrR = FileChannel.open(treePath, StandardOpenOption.READ);
+      dataR = FileChannel.open(dataPath, StandardOpenOption.READ);
+      keysR = FileChannel.open(metaPath, StandardOpenOption.READ);
       if (hasData) {
         entries = dataF.size() / Constants.MsgBodyLen;
         ByteBuffer buffer = ByteBuffer.allocate(8);

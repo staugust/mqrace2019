@@ -1,2 +1,4 @@
-*.iead
+*.idea
 *.class
+race2019.iml
+target

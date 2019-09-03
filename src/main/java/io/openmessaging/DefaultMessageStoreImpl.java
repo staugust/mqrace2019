@@ -1,5 +1,11 @@
 package io.openmessaging;
 
+import io.openmessaging.bplus.bptree.BPlusTree;
+import io.openmessaging.bplus.util.InvalidBTreeStateException;
+import io.openmessaging.seq.SeqStore;
+import io.openmessaging.seq.SeqStoreManager;
+
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -9,51 +15,28 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DefaultMessageStoreImpl extends MessageStore {
 
-    private NavigableMap<Long, List<Message>> msgMap = new TreeMap<Long, List<Message>>();
+    SeqStoreManager manager = null;
+
+    public DefaultMessageStoreImpl(){
+        manager = new SeqStoreManager();
+    }
 
     @Override
     public synchronized void put(Message message) {
-        if (!msgMap.containsKey(message.getT())) {
-            msgMap.put(message.getT(), new ArrayList<Message>());
-        }
-
-        msgMap.get(message.getT()).add(message);
+        manager.put(message);
     }
 
 
     @Override
     public synchronized List<Message> getMessage(long aMin, long aMax, long tMin, long tMax) {
-        ArrayList<Message> res = new ArrayList<Message>();
-        NavigableMap<Long, List<Message>> subMap = msgMap.subMap(tMin, true, tMax, true);
-        for (Map.Entry<Long, List<Message>> mapEntry : subMap.entrySet()) {
-            List<Message> msgQueue = mapEntry.getValue();
-            for (Message msg : msgQueue) {
-                if (msg.getA() >= aMin && msg.getA() <= aMax) {
-                    res.add(msg);
-                }
-            }
-        }
-
-        return res;
+        return manager.getMessage(aMin, aMax, tMin, tMax);
     }
 
 
     @Override
     public long getAvgValue(long aMin, long aMax, long tMin, long tMax) {
-        long sum = 0;
-        long count = 0;
-        NavigableMap<Long, List<Message>> subMap = msgMap.subMap(tMin, true, tMax, true);
-        for (Map.Entry<Long, List<Message>> mapEntry : subMap.entrySet()) {
-            List<Message> msgQueue = mapEntry.getValue();
-            for (Message msg : msgQueue) {
-                if (msg.getA() >= aMin && msg.getA() <= aMax) {
-                    sum += msg.getA();
-                    count++;
-                }
-            }
-        }
+       return manager.getAvgValue(aMin, aMax, tMin, tMax);
 
-        return count == 0 ? 0 : sum / count;
     }
 
 }

@@ -89,7 +89,13 @@ public class SeqStoreManager {
       res.addAll(store.getMessage(aMin, aMax, tMin, tMax));
     });
     res.sort((x, y) -> {
-      return (int) (x.getT() - y.getT());
+      if(x.getT() < y.getT()){
+        return -1;
+      }else if(x.getT() == y.getT()){
+        return 0;
+      }else{
+        return -1;
+      }
     });
     return res;
   }

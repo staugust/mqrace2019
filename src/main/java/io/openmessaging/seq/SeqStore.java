@@ -220,6 +220,56 @@ public class SeqStore {
     return lst;
   }
 
+
+  long findTMax(long tmax) {
+    try {
+      long h = 0;
+      long t = keysR.size() / 16 - 1;
+      long mid = (h + t) / 2;
+      long hKey = 0;
+      long tKey = 0;
+      long midKey = 0;
+      ByteBuffer buffer = ByteBuffer.allocate(16);
+
+      keysR.read(buffer, h);
+      hKey = buffer.getLong(8);
+      if (hKey > tmax) {
+        return 0;
+      } else if (hKey == tmax) {
+        buffer.clear();
+        keysR.read(buffer, 16);
+        return buffer.getLong(0);
+      }
+      buffer.clear();
+      keysR.read(buffer, 16 * t);
+      tKey = buffer.getLong(8);
+      if (tKey <= tmax) {
+        return entries;
+      }
+
+      while (t - h > 1) {
+        mid = (h + t) / 2;
+        buffer.clear();
+        keysR.read(buffer, mid * 16);
+        midKey = buffer.getLong(8);
+        if(midKey == tmax){
+          buffer.clear();
+          keysR.read(buffer, (mid+1) * 16);
+          return buffer.getLong(0);
+        }else if(midKey < tmax){
+          h = mid;
+        }else{
+          t = mid;
+        }
+      }
+
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return 0;
+  }
+
   void force() {
     try {
       int len = keyBuffer.position();

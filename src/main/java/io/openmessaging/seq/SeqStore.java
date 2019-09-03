@@ -81,7 +81,7 @@ public class SeqStore {
     writeMessage(msg);
   }
 
-  public long writeMessage(Message msg) {
+  public void writeMessage(Message msg) {
     try {
       dataBuffer.put(msg.getBody());
       if (dataBuffer.capacity() == dataBuffer.position()) {
@@ -107,7 +107,6 @@ public class SeqStore {
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return entries;
   }
 
 
@@ -173,43 +172,18 @@ public class SeqStore {
   public List<Long> getAvgValue(long aMin, long aMax, long tMin, long tMax) {
     long sumA = 0;
     long count = 0;
-    ByteBuffer contentBuffer = ByteBuffer.allocate(16);
-    long keyIdx = 0;
-    long prevKey = 0;
-    long nextKey = 0;
-    long prevIdx = 0;
-    long nextIdx = 0;
     try {
-      contentBuffer.clear();
-      keysR.read(contentBuffer, keyIdx * 16);
-      keyIdx += 1;
-      prevIdx = contentBuffer.getLong(0);
-      prevKey = contentBuffer.getLong(8);
-      long totalKeys = keysF.size() / 16;
-      for (; keyIdx <= totalKeys; keyIdx++) {
-        if (keyIdx != totalKeys) {
-          contentBuffer.clear();
-          keysR.read(contentBuffer, keyIdx * 16);
-          nextIdx = contentBuffer.getLong(0);
-          nextKey = contentBuffer.getLong(8);
-        } else {
-          nextIdx = entries;
-          nextKey = MAX_TS;
+      long h = findTMin(tMin);
+      long t = findTMax(tMax);
+      ByteBuffer attrBuffer = ByteBuffer.allocate(8);
+      for (long offset = h; offset < t; offset++) {
+        attrBuffer.clear();
+        attrR.read(attrBuffer, offset * 8);
+        long a = attrBuffer.getLong(0);
+        if (a >= aMin && a <= aMax) {
+          sumA += a;
+          count += 1;
         }
-        if (prevKey >= tMin && prevKey <= tMax) {
-          ByteBuffer attrBuffer = ByteBuffer.allocate(8);
-          for (long offset = prevIdx; offset < nextIdx; offset++) {
-            attrBuffer.clear();
-            attrR.read(attrBuffer, offset * 8);
-            long a = attrBuffer.getLong(0);
-            if (a >= aMin && a <= aMax) {
-              sumA += a;
-              count += 1;
-            }
-          }
-        }
-        prevIdx = nextIdx;
-        prevKey = nextKey;
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -218,6 +192,52 @@ public class SeqStore {
     lst.add(count);
     lst.add(sumA);
     return lst;
+  }
+
+  long findTMin(long tmin) {
+    try {
+      long h = 0;
+      long t = keysR.size() / 16 - 1;
+      long mid = (h + t) / 2;
+      long hKey = 0;
+      long tKey = 0;
+      long midKey = 0;
+      ByteBuffer buffer = ByteBuffer.allocate(16);
+
+      keysR.read(buffer, h);
+      hKey = buffer.getLong(8);
+      if (hKey >= tmin) {
+        return 0;
+      }
+      buffer.clear();
+      keysR.read(buffer, 16 * t);
+      tKey = buffer.getLong(8);
+      if (tKey < tmin) {
+        return entries;
+      }else if(tKey == tmin){
+        return buffer.getLong(0);
+      }
+
+      while (t - h > 1) {
+        mid = (h + t) / 2;
+        buffer.clear();
+        keysR.read(buffer, mid * 16);
+        midKey = buffer.getLong(8);
+        if(midKey == tmin){
+          return buffer.getLong(0);
+        }else if(midKey < tmin){
+          h = mid;
+        }else{
+          t = mid;
+        }
+      }
+      buffer.clear();
+      keysR.read(buffer, t * 16);
+      return buffer.getLong(0);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return 0;
   }
 
 
@@ -237,7 +257,7 @@ public class SeqStore {
         return 0;
       } else if (hKey == tmax) {
         buffer.clear();
-        keysR.read(buffer, 16);
+        keysR.read(buffer, (h+1) * 16);
         return buffer.getLong(0);
       }
       buffer.clear();
@@ -262,8 +282,9 @@ public class SeqStore {
           t = mid;
         }
       }
-
-
+      buffer.clear();
+      keysR.read(buffer, t * 16);
+      return buffer.getLong(0);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -300,6 +321,18 @@ public class SeqStore {
         System.out.println("write sub-attrbuffer  " + bytes + " which should be " + len);
         System.exit(-1);
       }
+      if(attrR.size() != attrF.size()){
+        System.out.println("attr read write not the same size " + attrR.size() + " : " + attrF.size());
+      }
+      if(dataR.size() != dataF.size()){
+        System.out.println("attr read write not the same size " + dataR.size() + " : " + dataF.size());
+      }
+      if(keysR.size() != keysF.size()){
+        System.out.println("attr read write not the same size " + keysR.size() + " : " + keysF.size());
+      }
+      attrR.force(true);
+      dataR.force(true);
+      keysR.force(true);
 
     } catch (Exception e) {
       e.printStackTrace();

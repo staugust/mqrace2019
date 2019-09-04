@@ -166,7 +166,7 @@ public class SeqStore {
     if (a < aMin || a > aMax) {
       return null;
     }
-    return new Message(t, attrBuffer.getLong(0), bytes);
+    return new Message(attrBuffer.getLong(0), t, bytes);
   }
 
   public List<Long> getAvgValue(long aMin, long aMax, long tMin, long tMax) {

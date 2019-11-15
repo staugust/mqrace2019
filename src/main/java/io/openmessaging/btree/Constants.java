@@ -15,8 +15,8 @@ public class Constants {
   public static final int TreeNodeSize = 1024; //
 
   //TODO change data_dir
-  public static final String DATA_DIR = "/alidata1/race2019/data/";
-  //public static final String DATA_DIR = "D:\\tmp\\alidata\\";
+  //public static final String DATA_DIR = "/alidata1/race2019/data/";
+  public static final String DATA_DIR = "D:\\tmp\\alidata\\";
 
   public static final String Tree_bin = (DATA_DIR + "%d" + ".attr");
   public static final String Data_bin = (DATA_DIR + "%d" + ".dat");
@@ -25,5 +25,5 @@ public class Constants {
   public static final long FileBlockSize = 0x40000000L; //increate 1GB
 
   //TODO modify to 34
-  public static final long MsgBodyLen = 34L;
+  public static final long MsgBodyLen = 8L;
 }
